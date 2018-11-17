@@ -1,0 +1,71 @@
+//个位数补零
+var zero = function (num) {
+	return num > 9 ? num : ('0' + num);
+}
+
+//记录时间格式化
+var format = function (date, mode) {
+	var map = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+	var myDate = getDate(date);
+	var year = myDate.getFullYear();
+	var month = zero(myDate.getMonth() + 1);
+	var date = zero(myDate.getDate());
+	var day = myDate.getDay();
+	var hour = zero(myDate.getHours());
+	var minute = zero(myDate.getMinutes());
+	var second = zero(myDate.getSeconds());
+	switch(mode) {
+		case 'timeline':
+			return date + '日 ' + map[day] + ' ' + hour + ':' + minute + ':' + second;
+		case 'picker':
+			return year + '-' + zero(month) + '-' + zero(date);
+		case 'swiper':
+		default:
+			return year + '年 ' + month + '月';
+	}
+}
+
+//按月归并数据
+var month = function (diaries, swiperCurrent) {
+	var cacheMonth = [];
+	var cacheMonths = [];
+	var indexMap = {};
+	//未更新数据时使用缓存
+	diaries.forEach(function (diary) {
+		var myDate = getDate(diary.date);
+		var month = myDate.getMonth();
+		if (typeof (indexMap[month]) === 'undefined') {
+			indexMap[month] = cacheMonth.length;
+			//指定序号的按月归并数据，用于scroll-view组件
+			cacheMonth[indexMap[month]] = [];
+			//总归并数据，用于swiper组件
+			cacheMonths[indexMap[month]] = {
+				key: indexMap[month].toString(),
+				date: format(diary.date, 'swiper'),
+				count: 0
+			};
+		}
+		cacheMonth[indexMap[month]].push(diary);
+		cacheMonths[indexMap[month]].count++;
+	});
+	return typeof (swiperCurrent) === 'undefined' ? cacheMonths : cacheMonth[swiperCurrent];
+}
+
+var array = function (length) {
+	var a = [];
+	for(var i=0; i<length; i++) {
+		a.push(i);
+	}
+	return a;
+}
+
+var photo = function (cover) {
+	return cover + parseInt(Math.random() * 8 + 1) + '.jpg';
+}
+
+module.exports = {
+	month: month,
+	format: format,
+	array: array,
+	photo: photo
+};
