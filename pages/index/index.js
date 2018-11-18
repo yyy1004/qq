@@ -88,6 +88,93 @@ Page({
 		});
 	},
 
+	//点击右下角按钮，选取图片添加回忆
+	add: function () {
+		let time = new Date().getTime();
+		let promises = [];
+		wx.chooseImage({
+			success: function(res) {
+				let paths = res.tempFilePaths;
+				for (let i = 0, len = paths.length; i < len; i++) {
+					promises.push(this.save(paths[i]));
+				}
+				Promise.all(promises).then(function (files) {
+					this.data.diaries.unshift({
+						key: this.data.diaries.length.toString(),
+						date: time,
+						files: files,
+						text: '记录美好的回忆'
+					});
+					this.setData({
+						diaries: this.data.diaries
+					});
+					try {
+						wx.setStorageSync('diaries', this.data.diaries);
+					} catch (e) { }
+				}.bind(this));
+			}.bind(this)
+		});
+	},
+
+	//选取图片后，保存到开发工具缓存中，后续可以打开使用
+	//这个缓存逻辑在真机上会因为缓存大小限制而不可用
+	//实际业务中应该把图片上传到服务器存储
+	save: function (path) {
+		return new Promise(function (resolve, reject) {
+			wx.saveFile({
+				tempFilePath: path,
+				success: function (res) {
+					resolve(res.savedFilePath);
+				}.bind(this),
+				fail: function () {
+					resolve();
+				}
+			});
+		}.bind(this));
+	},
+
+	//触发编辑，弹出输入框
+	note: function (event) {
+		//获取自定义数据，确认是哪个日记需要修改，需要在wxml里绑定数据
+		inputIndex = parseInt(event.currentTarget.dataset.index);
+		//把对应的日记内容添加到textarea组件里
+		text = this.data.diaries[inputIndex].text;
+		this.setData({
+			edit: true,
+			value: this.data.diaries[inputIndex].text
+		});
+	},
+
+	//输入文字时缓存待用
+	input: function (event) {
+		text = event.detail.value;
+	},
+
+	//输入框失去焦点时，保存日记内容。
+	blur: function () {
+		if (typeof (inputIndex) === 'undefined') {
+			return;
+		}
+		//更新页面数据 diaries
+		this.data.diaries[inputIndex].text = text;
+		this.setData({
+			edit: false,
+			diaries: this.data.diaries
+		});
+		//置空并更新页面数据缓存
+		inputIndex = undefined;
+		try {
+			wx.setStorageSync('diaries', this.data.diaries);
+		} catch (e) { }
+	},
+
+	//点击非输入框区域，也触发保存
+	outter: function(event) {
+		if(event.target.id === 'outter') {
+			this.blur();
+		}
+	},
+
 	//预览图片
 	preview: function (event) {
 		let index = parseInt(event.currentTarget.dataset.index);
@@ -97,5 +184,49 @@ Page({
 			current: image,
 			urls: files
 		});
+	},
+
+	//图片异常处理
+	error: function (event) {
+		let index = parseInt(event.currentTarget.dataset.index);
+		let fileIndex = event.currentTarget.dataset.fileIndex;
+		//使用 util.pathToData 生成附带路径的数据内容，就可以不用把整个 diaries 数组传递给视图层，减少了传递的数据量
+		errorArray.push({
+			path: 'diaries[' + index + '].files[' + fileIndex + ']',
+			value: errorImage
+		});
+		this.errorHandler();
+	},
+
+	errorHandler: function () {
+		clearTimeout(errorTimeout);
+		errorTimeout = setTimeout(function () {
+			this.setData(util.pathToData(errorArray));
+			errorArray = [];
+		}.bind(this), 500);
+	},
+
+	//分段渲染新数据
+	scrollToLower: function () {
+		let offset = this.data.diaries.length;	//追加的数据，序号从原数据的长度开始累加
+		let addData = util.getDemoData(10, offset);	//随机生成追加数据，传入offset用于计算 key 的数值
+		let pathData = [];	//追加数据先预处理放在这个数组里，再丢到 util.pathToData 生成附带路径的数据内容
+
+		//todo: 这里应该与原数据合并后再进行排序，否则展示的数据就不是严格的倒序了
+		//不过实际业务里，数据肯定是后端排好序再拉取下来的，所以就省略了这个步骤
+		//我们把关注点放在如何为页面追加数据的处理方法上
+
+		for (let i = 0, len = addData.length; i < len; i++) {
+			pathData.push({
+				path: 'diaries[' + (offset + i) + ']',
+				value: addData[i]
+			});
+		}
+
+		//保持逻辑层和视图层数据一致
+		this.data.diaries = this.data.diaries.concat(addData);
+
+		//把追加的数据传递给视图层
+		this.setData(util.pathToData(pathData));
 	}
 });

@@ -1,36 +1,46 @@
 <wxs src="../wxs/data.wxs" module="data"></wxs>
 <view class="wrapper">
-	<view class="top">
-		<view class="banner">
-			<swiper class='swiper' indicator-dots indicator-color="rgba(255,255,255,.5)" indicator-active-color="#ffffff" bindchange="change">
-				<block wx:for="{{data.month(diaries)}}" wx:for-item="month" wx:for-index="index" wx:key="key">
-					<swiper-item class="swiper-item">
-						<view class='statistics'>
-							<view class='month'>{{month.date}}</view>
-							<view class='count'>{{month.count}}个回忆</view> 
-						</view>
-					</swiper-item>
-				</block>
-			</swiper>
-		</view>
-	</view>
-	<!--scroll-view 组件 start-->
-		<view class="diary">
-			<view class="hd">
-				<text class="date"><!--展示日期、星期、时间--></text>
-			</view>
-			<view class="bd">
-				<view class="photos">
-					<!--展示图片-->
-				</view>
-				<view class="note" bindtap="note" data-index="{{diary.key}}">
-					<text class="desc"><!--展示日记文字内容--></text>
-				</view>
-			</view>
-		</view>
-	<!--scroll-view 组件 end-->
-	<button class="button"></button>
-	<view id="outter" class="edit">
-		<textarea class="textarea" value="{{value}}" placeholder="记录美好的回忆"></textarea>
-	</view>
+  <view class="top">
+    <view class="banner">
+      <swiper class='swiper' indicator-dots indicator-color="rgba(255,255,255,.5)" indicator-active-color="#ffffff" bindchange="change">
+        <block wx:for="{{data.month(diaries)}}" wx:for-item="month" wx:for-index="index" wx:key="key">
+          <swiper-item class="swiper-item">
+            <view class='statistics'>
+              <view class='month'>{{month.date}}</view>
+              <view class='count'>{{month.count}}个回忆</view>
+            </view>
+          </swiper-item>     
+        </block>
+      </swiper>
+    </view>
+  </view>
+  <!--scroll-view 组件 start-->
+  <scroll-view class="scroll-view" scroll-y style="height: {{scrollHeight}}rpx;" bindscrolltolower="scrollToLower">
+  <block wx:for='{{data.month(diaries,swiperCurrent)}}' wx:for-item='diary' wx:for-index='index' wx:key='key'>
+    <view class="diary">
+      <view class="hd">
+       <!--展示日期、星期、时间-->
+            <text class="date">{{data.format(diary.date, 'timeline')}} </text>
+      </view>
+      <view class="bd">
+        <view class="photos">
+          <!--展示图片-->
+          <block wx:for="{{diary.files}}" wx:for-item='file' wx:for-index="fileIndex" wx:key="">
+          <view wx:if='{{diary.video}}' class='photo' src='{{file}}' objectFit='cover'></view>
+          <image wx:else class='photo' src='{{file}}' mode="aspectFill" bindtap="preview" binderror="error"  data-index='{{diary.key}}' data-file-index='{{fileIndex}}' data-src='{{file}}' lazy-load> </image>
+          </block>
+        </view>
+        <view class="note" bindtap="note" data-index="{{diary.key}}">
+        <!--展示日记文字内容-->
+          <text class="desc">{{diary.text}}</text>
+        </view>
+      </view>
+    </view>
+  </block>
+  </scroll-view>
+  <!--scroll-view 组件 end-->
+  <button class="button" bindtap='add'></button>
+  <view id="outter" class="edit" wx:if="{{edit}}" bindtap="outter">
+    <textarea class="textarea" value="{{value}}" placeholder="记录美好的回忆" bindblur="blur" bindinput="input" data-index="{{diary.key}}"></textarea>
+  </view>
 </view>
